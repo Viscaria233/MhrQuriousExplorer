@@ -25,9 +25,8 @@ data class QuriousResult(
 ) {
     val overview: Map<String, Int> = items.asSequence()
             .groupBy { it.name }
-            .mapValues { entry ->
-                entry.value.sumOf { it.count }
-            }
+            .mapValues { entry -> entry.value.sumOf { it.count } }
+            .filterValues { it != 0 }
 }
 
 fun QuriousResult.meets(condition: SearchGroup): Boolean {

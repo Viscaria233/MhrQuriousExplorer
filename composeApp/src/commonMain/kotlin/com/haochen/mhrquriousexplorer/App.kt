@@ -3,22 +3,32 @@ package com.haochen.mhrquriousexplorer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -32,94 +42,155 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.haochen.mhrquriousexplorer.test.FakeData
+import kotlinx.coroutines.launch
+import kotlinx.io.files.Path
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
-fun App() {
-    MhrQuriousExplorer()
-}
-
-@Composable
-@Preview
-private fun MhrQuriousExplorer(
-    modifier: Modifier = Modifier,
+fun App(
     scanFilesVm: ScanFilesVm = viewModel { ScanFilesVm() },
     searchInputVm: SearchInputVm = viewModel { SearchInputVm() },
     searchQuriousVm: SearchQuriousVm = viewModel { SearchQuriousVm() },
 ) {
+    val files = scanFilesVm.files.collectAsState()
+    val groups = searchInputVm.groups.collectAsState()
+    val results = searchQuriousVm.results.collectAsState()
+    val selectedFileIndex = remember { mutableStateOf(0) }
     MaterialTheme(
         typography = myTypography(),
     ) {
-        Column(
-            modifier = modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        MhrQuriousExplorer(
+            modifier = Modifier,
+            files = files.value,
+            groups = groups.value,
+            results = results.value,
+            selectedState = selectedFileIndex,
+            onRefreshClick = {
+                scanFilesVm.refreshFiles()
+            },
+            onAddGroupClick = {
+                searchInputVm.createNewGroup()
+            },
+            onAddItemClick = { group ->
+                searchInputVm.createNewItem(group)
+            },
+            onRemoveItemClick = { group, item ->
+                searchInputVm.removeItem(group, item)
+            },
+            onItemUpdate = { group, oldItem, newItem ->
+                searchInputVm.updateItem(group, oldItem, newItem)
+            },
+            onSearchClick = {
+                files.value.getOrNull(selectedFileIndex.value)?.let { file ->
+                    searchQuriousVm.search(file, groups.value)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun MainScreen(
+    files: List<Path> = emptyList(),
+    groups: List<SearchGroup> = emptyList(),
+    results: List<QuriousResult> = emptyList(),
+    selectedState: MutableState<Int> = remember { mutableStateOf(0) },
+    onRefreshClick: () -> Unit = {},
+    onAddGroupClick: () -> Unit = {},
+    onAddItemClick: (group: SearchGroup) -> Unit = {},
+    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit = { _, _ -> },
+    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit = { _, _, _ -> },
+    onSearchClick: () -> Unit = {},
+) {
+    MaterialTheme(
+        typography = myTypography(),
+    ) {
+        MhrQuriousExplorer(
+            modifier = Modifier,
+            files = files,
+            groups = groups,
+            results = results,
+            selectedState = selectedState,
+            onRefreshClick = onRefreshClick,
+            onAddGroupClick = onAddGroupClick,
+            onAddItemClick = onAddItemClick,
+            onRemoveItemClick = onRemoveItemClick,
+            onItemUpdate = onItemUpdate,
+            onSearchClick = onSearchClick,
+        )
+    }
+}
+
+@Composable
+private fun MhrQuriousExplorer(
+    modifier: Modifier = Modifier,
+    files: List<Path>,
+    groups: List<SearchGroup>,
+    results: List<QuriousResult>,
+    selectedState: MutableState<Int>,
+    onRefreshClick: () -> Unit,
+    onAddGroupClick: () -> Unit,
+    onAddItemClick: (group: SearchGroup) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    onSearchClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SearchResult(
+            modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            results = withPreview(results) { FakeData.results },
+        )
+        Row(
+            modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            val results = searchQuriousVm.results.collectAsState()
-            SearchResult(
+            FileList(
                 modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(2f),
-                results = withPreview(results.value) { FakeData.results },
-            )
-            Row(
-                modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxHeight()
                         .weight(1f)
-                        .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val files = scanFilesVm.files.collectAsState()
-                val selectedFileIndex = remember { mutableStateOf(0) }
-                FileList(
-                    modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp)),
-                    files = withPreview(files.value.map { it.name }) { FakeData.files },
-                    selectedState = selectedFileIndex,
-                    onRefreshClick = {
-                        scanFilesVm.refreshFiles()
-                    },
-                )
-                val groups = searchInputVm.groups.collectAsState()
-                SearchBox(
-                    modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(2f)
-                            .clip(RoundedCornerShape(8.dp)),
-                    groups = withPreview(groups.value) { FakeData.groups },
-                    onAddGroupClick = {
-                        searchInputVm.createNewGroup()
-                    },
-                    onAddItemClick = { group ->
-                        searchInputVm.createNewItem(group)
-                    },
-                    onRemoveItemClick = { group, item ->
-                        searchInputVm.removeItem(group, item)
-                    },
-                    onItemUpdate = { group, oldItem, newItem ->
-                        searchInputVm.updateItem(group, oldItem, newItem)
-                    },
-                    onSearchClick = {
-                        files.value.getOrNull(selectedFileIndex.value)?.let { file ->
-                            searchQuriousVm.search(file, groups.value)
-                        }
-                    }
-                )
-            }
+                        .clip(RoundedCornerShape(8.dp)),
+                files = withPreview(files.map { it.name }) { FakeData.files },
+                selectedState = selectedState,
+                onRefreshClick = onRefreshClick,
+            )
+            SearchBox(
+                modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(2f)
+                        .clip(RoundedCornerShape(8.dp)),
+                groups = withPreview(groups) { FakeData.groups },
+                onAddGroupClick = onAddGroupClick,
+                onAddItemClick = onAddItemClick,
+                onRemoveItemClick = onRemoveItemClick,
+                onItemUpdate = onItemUpdate,
+                onSearchClick = onSearchClick,
+            )
         }
     }
 }
@@ -402,11 +473,38 @@ private fun SearchResult(
     modifier: Modifier = Modifier,
     results: List<QuriousResult>,
 ) {
-    Box(
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    LazyRow (
         modifier = modifier
+                .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primaryContainer)
+                .draggable(
+                    state = rememberDraggableState { deltaX ->
+                        coroutineScope.launch {
+                            lazyListState.scrollBy(-deltaX)
+                        }
+                    },
+                    Orientation.Horizontal
+                )
+                .onScrollWheel { deltaX, deltaY ->
+                    coroutineScope.launch {
+                        lazyListState.scrollBy(deltaY * 30)
+                    }
+                },
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(12.dp),
+        state = lazyListState,
     ) {
-
+        items(
+            items = results,
+            key = { it.seq },
+        ) {
+            QuriousResultCard(
+                modifier = Modifier,
+                result = it,
+            )
+        }
     }
 }
 
@@ -415,10 +513,30 @@ private fun QuriousResultCard(
     modifier: Modifier = Modifier,
     result: QuriousResult,
 ) {
-    Box(
+    Column(
         modifier = modifier
+                .widthIn(min = 100.dp)
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.inversePrimary)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-    )
+                .background(MaterialTheme.colorScheme.inversePrimary),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        Text(
+            modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .align(Alignment.Start),
+            text = "# ${result.seq}",
+            fontWeight = FontWeight.Bold,
+        )
+        result.overview.forEach { (name, count) ->
+            Text(
+                modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 12.dp)
+                        .align(Alignment.Start),
+                text = "$name: $count",
+                fontWeight = FontWeight.Normal,
+            )
+        }
+    }
 }
