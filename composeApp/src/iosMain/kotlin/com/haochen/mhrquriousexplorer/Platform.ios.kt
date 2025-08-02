@@ -1,5 +1,6 @@
 package com.haochen.mhrquriousexplorer
 
+import kotlinx.io.files.Path
 import platform.UIKit.UIDevice
 
 class IOSPlatform: Platform {
@@ -7,3 +8,5 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
+
+actual fun getBaseDir(): Path? = null

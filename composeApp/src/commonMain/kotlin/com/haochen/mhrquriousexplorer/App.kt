@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,91 +41,85 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.haochen.mhrquriousexplorer.test.FakeData
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme(
-        typography = myTypography(),
-    ) {
-        MhrQuriousExplorer()
-    }
+    MhrQuriousExplorer()
 }
 
 @Composable
-private fun MhrQuriousExplorer(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+@Preview
+private fun MhrQuriousExplorer(
+    modifier: Modifier = Modifier,
+    scanFilesVm: ScanFilesVm = viewModel { ScanFilesVm() },
+    searchInputVm: SearchInputVm = viewModel { SearchInputVm() },
+    searchQuriousVm: SearchQuriousVm = viewModel { SearchQuriousVm() },
+) {
+    MaterialTheme(
+        typography = myTypography(),
     ) {
-        SearchResult(
-            modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(2f)
-        )
-        Row(
-            modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val files = FakeData.files
-            val selectedFileIndex = remember { mutableStateOf(0) }
-            FileList(
+            val results = searchQuriousVm.results.collectAsState()
+            SearchResult(
                 modifier = Modifier
-                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .weight(2f),
+                results = withPreview(results.value) { FakeData.results },
+            )
+            Row(
+                modifier = Modifier
+                        .fillMaxWidth()
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp)),
-                files = withPreview(files) { FakeData.files },
-                selectedState = selectedFileIndex,
-                onRefreshClick = {
-                    println("refresh")
-                },
-            )
-            val groups = remember { mutableStateOf(FakeData.groups) }
-            SearchBox(
-                modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(2f)
-                        .clip(RoundedCornerShape(8.dp)),
-                groups = withPreview(groups.value) { FakeData.groups },
-                onAddGroupClick = {
-                    groups.value = groups.value.toMutableList().apply { add(SearchGroup()) }
-                },
-                onAddItemClick = block@{ group ->
-                    val currentGroups = groups.value.toMutableList()
-                    val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return@block
-                    currentGroups[index] = group.copy(items = group.items.toMutableList().apply { add(SearchItem()) })
-                    groups.value = currentGroups
-                },
-                onRemoveItemClick = block@{ group, item ->
-                    val currentGroups = groups.value.toMutableList()
-                    val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return@block
-                    val newGroup = group.copy(items = group.items.toMutableList().apply { remove(item) })
-                    if (newGroup.items.isEmpty()) {
-                        currentGroups.removeAt(index)
-                    } else {
-                        currentGroups[index] = newGroup
+                        .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val files = scanFilesVm.files.collectAsState()
+                val selectedFileIndex = remember { mutableStateOf(0) }
+                FileList(
+                    modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp)),
+                    files = withPreview(files.value.map { it.name }) { FakeData.files },
+                    selectedState = selectedFileIndex,
+                    onRefreshClick = {
+                        scanFilesVm.refreshFiles()
+                    },
+                )
+                val groups = searchInputVm.groups.collectAsState()
+                SearchBox(
+                    modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(2f)
+                            .clip(RoundedCornerShape(8.dp)),
+                    groups = withPreview(groups.value) { FakeData.groups },
+                    onAddGroupClick = {
+                        searchInputVm.createNewGroup()
+                    },
+                    onAddItemClick = { group ->
+                        searchInputVm.createNewItem(group)
+                    },
+                    onRemoveItemClick = { group, item ->
+                        searchInputVm.removeItem(group, item)
+                    },
+                    onItemUpdate = { group, oldItem, newItem ->
+                        searchInputVm.updateItem(group, oldItem, newItem)
+                    },
+                    onSearchClick = {
+                        files.value.getOrNull(selectedFileIndex.value)?.let { file ->
+                            searchQuriousVm.search(file, groups.value)
+                        }
                     }
-                    groups.value = currentGroups
-                },
-                onItemUpdate = block@{ group: SearchGroup, oldItem: SearchItem, newItem: SearchItem ->
-                    val currentGroups = groups.value.toMutableList()
-                    val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return@block
-                    currentGroups[index] = group.copy(items = group.items.toMutableList().apply {
-                        val itemIndex = indexOf(oldItem).takeIf { it >= 0 } ?: return@block
-                        this[itemIndex] = newItem
-                    })
-                    groups.value = currentGroups
-                },
-                onSearchClick = {
-                    println("search\n  file=${files.getOrNull(selectedFileIndex.value)}\n  ${groups.value}")
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -189,8 +185,8 @@ private fun SearchBox(
     groups: List<SearchGroup>,
     onAddGroupClick: () -> Unit,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
-    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
     onSearchClick: () -> Unit,
 ) {
     Column(
@@ -246,8 +242,8 @@ private fun SearchGroupList(
     modifier: Modifier = Modifier,
     groups: List<SearchGroup>,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
-    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier,
@@ -281,8 +277,8 @@ private fun SearchGroup(
     modifier: Modifier = Modifier,
     group: SearchGroup,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
-    onItemUpdate: (oldItem: SearchItem, newItem: SearchItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
+    onItemUpdate: (oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
 ) {
     Row(
         modifier = modifier,
@@ -337,9 +333,9 @@ private fun SearchGroup(
 @Composable
 private fun SearchItemEditor(
     modifier: Modifier = Modifier,
-    item: SearchItem,
-    onRemoveItemClick: (item: SearchItem) -> Unit,
-    onItemUpdate: (oldItem: SearchItem, newItem: SearchItem) -> Unit,
+    item: QuriousItem,
+    onRemoveItemClick: (item: QuriousItem) -> Unit,
+    onItemUpdate: (oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
 ) {
     Row(
         modifier = modifier,
@@ -402,7 +398,10 @@ private fun SearchItemEditor(
 }
 
 @Composable
-private fun SearchResult(modifier: Modifier = Modifier) {
+private fun SearchResult(
+    modifier: Modifier = Modifier,
+    results: List<QuriousResult>,
+) {
     Box(
         modifier = modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -411,11 +410,15 @@ private fun SearchResult(modifier: Modifier = Modifier) {
     }
 }
 
-private object FakeData {
-    val files: List<String> = (1..20).map { "file_$it" }
-    val groups: List<SearchGroup> = (1..3).map { groupIndex ->
-        SearchGroup(
-            items = (1..groupIndex).map { SearchItem(name = "item_$it", count = it) }
-        )
-    }
+@Composable
+private fun QuriousResultCard(
+    modifier: Modifier = Modifier,
+    result: QuriousResult,
+) {
+    Box(
+        modifier = modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.inversePrimary)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+    )
 }
