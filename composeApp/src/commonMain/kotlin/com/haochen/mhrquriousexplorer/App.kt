@@ -528,13 +528,13 @@ private fun QuriousResultCard(
             text = "# ${result.seq}",
             fontWeight = FontWeight.Bold,
         )
-        result.overview.forEach { (name, count) ->
+        result.overview.forEach { item ->
             Text(
                 modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .padding(bottom = 12.dp)
                         .align(Alignment.Start),
-                text = "$name: $count",
+                text = "${item.name}: ${item.count}",
                 fontWeight = FontWeight.Normal,
             )
         }

@@ -42,7 +42,16 @@ class SearchQuriousVm : ViewModel() {
             return allQurious.value
         }
         return allQurious.value.filter { qurious ->
-            conditions.all { qurious.meets(it) }
+            val overview = qurious.overview.toMutableList()
+            conditions.all { condition ->
+                val firstMeetsInfo = overview.firstMeets(condition) ?: return@all false
+                if (firstMeetsInfo.decreasedItem.count > 0) {
+                    overview[firstMeetsInfo.index] = firstMeetsInfo.decreasedItem
+                } else {
+                    overview.removeAt(firstMeetsInfo.index)
+                }
+                true
+            }
         }
     }
 
