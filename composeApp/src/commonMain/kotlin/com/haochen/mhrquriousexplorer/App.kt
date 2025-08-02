@@ -70,6 +70,7 @@ fun App(
     val files = scanFilesVm.files.collectAsState()
     val groups = searchInputVm.groups.collectAsState()
     val results = searchQuriousVm.results.collectAsState()
+    val allQurious = searchQuriousVm.allQurious.collectAsState()
     val selectedFileIndex = remember { mutableStateOf(0) }
     MaterialTheme(
         typography = myTypography(),
@@ -79,6 +80,7 @@ fun App(
             files = files.value,
             groups = groups.value,
             results = results.value,
+            totalCount = allQurious.value.size,
             selectedState = selectedFileIndex,
             onRefreshClick = {
                 scanFilesVm.refreshFiles()
@@ -110,6 +112,7 @@ private fun MainScreen(
     files: List<Path> = emptyList(),
     groups: List<SearchGroup> = emptyList(),
     results: List<QuriousResult> = emptyList(),
+    totalCount: Int = 0,
     selectedState: MutableState<Int> = remember { mutableStateOf(0) },
     onRefreshClick: () -> Unit = {},
     onAddGroupClick: () -> Unit = {},
@@ -123,9 +126,10 @@ private fun MainScreen(
     ) {
         MhrQuriousExplorer(
             modifier = Modifier,
-            files = files,
-            groups = groups,
-            results = results,
+            files = withPreview(files) { FakeData.files },
+            groups = withPreview(groups) { FakeData.groups },
+            results = withPreview(results) { FakeData.results },
+            totalCount = withPreview(totalCount) { FakeData.allQurious.size },
             selectedState = selectedState,
             onRefreshClick = onRefreshClick,
             onAddGroupClick = onAddGroupClick,
@@ -143,6 +147,7 @@ private fun MhrQuriousExplorer(
     files: List<Path>,
     groups: List<SearchGroup>,
     results: List<QuriousResult>,
+    totalCount: Int,
     selectedState: MutableState<Int>,
     onRefreshClick: () -> Unit,
     onAddGroupClick: () -> Unit,
@@ -160,13 +165,14 @@ private fun MhrQuriousExplorer(
         SearchResult(
             modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-            results = withPreview(results) { FakeData.results },
+                    .weight(4f),
+            results = results,
+            totalCount = totalCount,
         )
         Row(
             modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(3f)
                     .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -175,7 +181,7 @@ private fun MhrQuriousExplorer(
                         .fillMaxHeight()
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp)),
-                files = withPreview(files.map { it.name }) { FakeData.files },
+                files = files.map { it.name },
                 selectedState = selectedState,
                 onRefreshClick = onRefreshClick,
             )
@@ -184,7 +190,7 @@ private fun MhrQuriousExplorer(
                         .fillMaxHeight()
                         .weight(2f)
                         .clip(RoundedCornerShape(8.dp)),
-                groups = withPreview(groups) { FakeData.groups },
+                groups = groups,
                 onAddGroupClick = onAddGroupClick,
                 onAddItemClick = onAddItemClick,
                 onRemoveItemClick = onRemoveItemClick,
@@ -472,13 +478,37 @@ private fun SearchItemEditor(
 private fun SearchResult(
     modifier: Modifier = Modifier,
     results: List<QuriousResult>,
+    totalCount: Int,
+) {
+    Column(
+        modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Text(
+            modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .align(Alignment.Start),
+            text = "已显示 ${results.size} / $totalCount",
+            fontWeight = FontWeight.Normal,
+        )
+        QuriousResultList(
+            modifier = Modifier,
+            results = results,
+        )
+    }
+}
+
+@Composable
+private fun QuriousResultList(
+    modifier: Modifier = Modifier,
+    results: List<QuriousResult>,
 ) {
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     LazyRow (
         modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primaryContainer)
                 .draggable(
                     state = rememberDraggableState { deltaX ->
                         coroutineScope.launch {

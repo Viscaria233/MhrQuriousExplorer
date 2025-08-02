@@ -9,8 +9,10 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readLine
 
 class SearchQuriousVm : ViewModel() {
-    private val allQurious = MutableStateFlow<List<QuriousResult>>(emptyList())
     private var currentFile: Path? = null
+
+    private val _allQurious = MutableStateFlow<List<QuriousResult>>(emptyList())
+    val allQurious = _allQurious.asStateFlow()
 
     private val _results = MutableStateFlow<List<QuriousResult>>(emptyList())
     val results = _results.asStateFlow()
@@ -21,7 +23,7 @@ class SearchQuriousVm : ViewModel() {
             try {
                 loadQurious(file)
                 currentFile = file
-                logMsg.append("  loadQurious size=${allQurious.value.size}\n")
+                logMsg.append("  loadQurious size=${_allQurious.value.size}\n")
             } catch (e: Exception) {
                 logMsg.append("  loadQurious error. ${e.logMsg}\n")
             }
@@ -39,9 +41,9 @@ class SearchQuriousVm : ViewModel() {
 
     private fun search(conditions: List<SearchGroup>): List<QuriousResult> {
         if (conditions.isEmpty()) {
-            return allQurious.value
+            return _allQurious.value
         }
-        return allQurious.value.filter { qurious ->
+        return _allQurious.value.filter { qurious ->
             val overview = qurious.overview.toMutableList()
             conditions.all { condition ->
                 val firstMeetsInfo = overview.firstMeets(condition) ?: return@all false
@@ -72,6 +74,6 @@ class SearchQuriousVm : ViewModel() {
                         .add(QuriousItem(name = name, count = count.toInt()))
             }
         }
-        allQurious.value = qurious.map { QuriousResult(seq = it.key, conditions = emptyList(), items = it.value) }
+        _allQurious.value = qurious.map { QuriousResult(seq = it.key, conditions = emptyList(), items = it.value) }
     }
 }
