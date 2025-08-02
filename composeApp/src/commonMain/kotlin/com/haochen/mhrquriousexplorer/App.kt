@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,19 +35,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
+@Preview
 fun App() {
-    MaterialTheme {
+    MaterialTheme(
+        typography = myTypography(),
+    ) {
         MhrQuriousExplorer()
     }
 }
 
-@Preview
 @Composable
 private fun MhrQuriousExplorer(modifier: Modifier = Modifier) {
     Column(
@@ -202,6 +206,7 @@ private fun SearchBox(
                     .clickable {
                         onAddGroupClick()
                     },
+            style = TextStyle.Default,
             text = "+",
         )
         SearchGroupList(
@@ -323,6 +328,7 @@ private fun SearchGroup(
                     .clickable {
                         onAddItemClick(group)
                     },
+            style = TextStyle.Default,
             text = "+",
         )
     }
@@ -350,6 +356,7 @@ private fun SearchItemEditor(
                         }
                         onItemUpdate(item, item.copy(name = nameState.text.toString()))
                     },
+            textStyle = TextStyle.Default.copy(fontFamily = LocalTextStyle.current.fontFamily),
             lineLimits = TextFieldLineLimits.SingleLine,
             state = nameState,
         )
@@ -374,6 +381,7 @@ private fun SearchItemEditor(
                         }
                         onItemUpdate(item, item.copy(count = count))
                     },
+            textStyle = TextStyle.Default.copy(fontFamily = LocalTextStyle.current.fontFamily),
             lineLimits = TextFieldLineLimits.SingleLine,
             state = countState,
         )
@@ -387,7 +395,8 @@ private fun SearchItemEditor(
                     .clickable {
                         onRemoveItemClick(item)
                     },
-            text = "-"
+            style = TextStyle.Default,
+            text = "-",
         )
     }
 }
