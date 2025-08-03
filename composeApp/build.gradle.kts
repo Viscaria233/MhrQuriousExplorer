@@ -124,7 +124,7 @@ compose.desktop {
         mainClass = "com.haochen.mhrquriousexplorer.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
+            targetFormats(TargetFormat.Exe, TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "MhrQuriousExplorer"
             packageVersion = appVersion
         }
