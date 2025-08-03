@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.buildConfig)
 }
 
 kotlin {
@@ -110,6 +111,14 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+val appVersion = "1.0.0"
+
+buildConfig {
+    android.namespace?.let { packageName(it) }
+    useKotlinOutput()
+    buildConfigField("APP_VERSION", appVersion)
+}
+
 compose.desktop {
     application {
         mainClass = "com.haochen.mhrquriousexplorer.MainKt"
@@ -117,7 +126,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "MhrQuriousExplorer"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
         }
     }
 }

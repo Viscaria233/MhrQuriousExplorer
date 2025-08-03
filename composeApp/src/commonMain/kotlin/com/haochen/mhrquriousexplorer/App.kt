@@ -3,19 +3,16 @@ package com.haochen.mhrquriousexplorer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,13 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.haochen.mhrquriousexplorer.test.FakeData
 import kotlinx.coroutines.launch
@@ -485,13 +480,26 @@ private fun SearchResult(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Text(
+        Row(
             modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .align(Alignment.Start),
-            text = "已显示 ${results.size} / $totalCount",
-            fontWeight = FontWeight.Normal,
-        )
+                    .fillMaxWidth(),
+        ) {
+            Text(
+                modifier = Modifier
+                        .padding(start = 12.dp, top = 8.dp),
+                text = "已显示 ${results.size} / $totalCount",
+                fontWeight = FontWeight.Normal,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                modifier = Modifier
+                        .padding(top = 4.dp, end = 4.dp),
+                text = BuildConfig.APP_VERSION,
+                fontWeight = FontWeight.Light,
+                fontSize = 10.sp,
+                style = TextStyle.Default.copy(fontFamily = myFontFamily()),
+            )
+        }
         QuriousResultList(
             modifier = Modifier,
             results = results,
