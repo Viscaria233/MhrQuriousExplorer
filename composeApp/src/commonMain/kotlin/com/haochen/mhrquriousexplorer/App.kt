@@ -61,7 +61,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.haochen.mhrquriousexplorer.test.FakeData
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
+import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.regular.Copy
+import compose.icons.fontawesomeicons.solid.Minus
+import compose.icons.fontawesomeicons.solid.Plus
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -277,7 +280,7 @@ private fun SearchBox(
         modifier = modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
-        TextButton(
+        Image(
             modifier = Modifier
                     .size(30.dp)
                     .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
@@ -285,9 +288,10 @@ private fun SearchBox(
                     .align(Alignment.End)
                     .clickable {
                         onAddGroupClick()
-                    },
-            style = TextStyle.Default,
-            text = "+",
+                    }
+                    .padding(8.dp),
+            imageVector = FontAwesomeIcons.Solid.Plus,
+            contentDescription = null,
         )
         SearchGroupList(
             modifier = Modifier
@@ -398,7 +402,7 @@ private fun SearchGroup(
                 }
             }
         }
-        TextButton(
+        Image(
             modifier = Modifier
                     .padding(start = 12.dp)
                     .size(30.dp)
@@ -407,9 +411,10 @@ private fun SearchGroup(
                     .align(Alignment.Top)
                     .clickable {
                         onAddItemClick(group)
-                    },
-            style = TextStyle.Default,
-            text = "+",
+                    }
+                    .padding(8.dp),
+            imageVector = FontAwesomeIcons.Solid.Plus,
+            contentDescription = null,
         )
     }
 }
@@ -465,7 +470,7 @@ private fun SearchItemEditor(
             lineLimits = TextFieldLineLimits.SingleLine,
             state = countState,
         )
-        TextButton(
+        Image(
             modifier = Modifier
                     .padding(end = 2.dp)
                     .size(20.dp)
@@ -474,9 +479,10 @@ private fun SearchItemEditor(
                     .align(Alignment.CenterVertically)
                     .clickable {
                         onRemoveItemClick(item)
-                    },
-            style = TextStyle.Default,
-            text = "-",
+                    }
+                    .padding(6.dp),
+            imageVector = FontAwesomeIcons.Solid.Minus,
+            contentDescription = null,
         )
     }
 }
