@@ -32,26 +32,3 @@ data class QuriousResult(
             .filterValues { it != 0 }
             .map { (name, count) -> QuriousItem(name = name, count = count) }
 }
-
-data class MeetsInfo(
-    val index: Int,
-    val decreasedItem: QuriousItem,
-)
-
-fun List<QuriousItem>.firstMeets(condition: SearchGroup): MeetsInfo? {
-    forEachIndexed { index, item ->
-        val decreased = item.decreaseIfMeets(condition) ?: return@forEachIndexed
-        return MeetsInfo(index, decreased)
-    }
-    return null
-}
-
-private fun QuriousItem.decreaseIfMeets(condition: SearchGroup): QuriousItem? {
-    val metItem = condition.items.firstOrNull { meets(it) } ?: return null
-    val decreasedCount = count - metItem.count
-    return copy(count = decreasedCount)
-}
-
-private fun QuriousItem.meets(condition: QuriousItem): Boolean {
-    return name.contains(condition.name) && count >= condition.count
-}

@@ -43,19 +43,54 @@ class SearchQuriousVm : ViewModel() {
         if (conditions.isEmpty()) {
             return _allQurious.value
         }
-        return _allQurious.value.filter { qurious ->
-            val overview = qurious.overview.toMutableList()
-            conditions.all { condition ->
-                val firstMeetsInfo = overview.firstMeets(condition) ?: return@all false
-                if (firstMeetsInfo.decreasedItem.count > 0) {
-                    overview[firstMeetsInfo.index] = firstMeetsInfo.decreasedItem
-                } else {
-                    overview.removeAt(firstMeetsInfo.index)
+        return _allQurious.value.filter { it.meets(conditions) }
+    }
+
+    private fun QuriousResult.meets(conditions: List<SearchGroup>): Boolean {
+        val overview = overview.toMutableList()
+        for (condition in conditions) {
+            var consumed: Pair<Int, QuriousItem>? = null
+            var omittedConsumed: QuriousItem? = null
+            for (conditionItem in condition.items) {
+                if (consumed != null) {
+                    break
                 }
-                true
+                var nameMatchedIndex: Int? = null
+                for (index in overview.indices) {
+                    val item = overview[index]
+                    if (item.name.contains(conditionItem.name)) {
+                        nameMatchedIndex = index
+                        if (item.count >= conditionItem.count) {
+                            consumed = index to item.copy(count = item.count - conditionItem.count)
+                            break
+                        }
+                    }
+                }
+                if (nameMatchedIndex == null) {
+                    if (conditionItem.count <= 0) {
+                        omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
+                    }
+                }
+            }
+            if (consumed != null) {
+                overview[consumed.first] = consumed.second
+            } else if (omittedConsumed != null) {
+                overview.add(omittedConsumed)
+            } else {
+                return false
             }
         }
+        return true
     }
+
+//    private fun QuriousResult.meets(conditions: List<SearchGroup>): Boolean {
+//        val overview = overview.toMutableList()
+//        return conditions.all { condition ->
+//            val firstMeetsInfo = overview.firstMeets(condition) ?: return@all false
+//            overview[firstMeetsInfo.index] = firstMeetsInfo.consumedItem
+//            true
+//        }
+//    }
 
     private fun loadQurious(file: Path) {
         val qurious = mutableMapOf<Int, MutableList<QuriousItem>>()
