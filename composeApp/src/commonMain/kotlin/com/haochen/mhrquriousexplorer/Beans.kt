@@ -31,4 +31,12 @@ data class QuriousResult(
             .mapValues { entry -> entry.value.sumOf { it.count } }
             .filterValues { it != 0 }
             .map { (name, count) -> QuriousItem(name = name, count = count) }
+
+    val text: String
+        get() = StringBuilder().apply {
+            append("# $seq\n")
+            overview.forEach {
+                append("  ${it.name}: ${it.count}\n")
+            }
+        }.toString()
 }

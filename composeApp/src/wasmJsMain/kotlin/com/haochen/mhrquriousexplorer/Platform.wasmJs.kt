@@ -4,6 +4,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import kotlinx.io.files.Path
 
 class WasmPlatform: Platform {
@@ -22,3 +24,7 @@ actual fun Modifier.onScrollWheel(onScroll: (deltaX: Float, deltaY: Float) -> Un
         onScroll(delta.x, delta.y)
     }
 )
+
+actual suspend fun Clipboard.setContent(content: String) {
+    setClipEntry(ClipEntry.withPlainText(content))
+}

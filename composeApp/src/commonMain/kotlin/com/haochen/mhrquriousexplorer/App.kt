@@ -1,5 +1,6 @@
 package com.haochen.mhrquriousexplorer
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +11,7 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -45,6 +48,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,9 +59,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.haochen.mhrquriousexplorer.test.FakeData
+import compose.icons.FontAwesomeIcons
+import compose.icons.fontawesomeicons.Regular
+import compose.icons.fontawesomeicons.regular.Copy
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import org.jetbrains.compose.ui.tooling.preview.Preview
+
+private val ROUND_CORNER_SIZE = 8.dp
 
 @Composable
 fun App(
@@ -175,7 +187,7 @@ private fun MhrQuriousExplorer(
                 modifier = Modifier
                         .fillMaxHeight()
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(ROUND_CORNER_SIZE)),
                 files = files.map { it.name },
                 selectedState = selectedState,
                 onRefreshClick = onRefreshClick,
@@ -184,7 +196,7 @@ private fun MhrQuriousExplorer(
                 modifier = Modifier
                         .fillMaxHeight()
                         .weight(2f)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(ROUND_CORNER_SIZE)),
                 groups = groups,
                 onAddGroupClick = onAddGroupClick,
                 onAddItemClick = onAddItemClick,
@@ -268,7 +280,7 @@ private fun SearchBox(
         TextButton(
             modifier = Modifier
                     .size(30.dp)
-                    .clip(RoundedCornerShape(bottomStart = 8.dp))
+                    .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
                     .background(MaterialTheme.colorScheme.tertiaryContainer)
                     .align(Alignment.End)
                     .clickable {
@@ -390,7 +402,7 @@ private fun SearchGroup(
             modifier = Modifier
                     .padding(start = 12.dp)
                     .size(30.dp)
-                    .clip(RoundedCornerShape(bottomStart = 8.dp))
+                    .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
                     .background(MaterialTheme.colorScheme.tertiaryContainer)
                     .align(Alignment.Top)
                     .clickable {
@@ -554,18 +566,40 @@ private fun QuriousResultCard(
     Column(
         modifier = modifier
                 .widthIn(min = 100.dp)
+                .width(IntrinsicSize.Max)
                 .wrapContentHeight()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(ROUND_CORNER_SIZE))
                 .background(MaterialTheme.colorScheme.inversePrimary),
         horizontalAlignment = Alignment.Start,
     ) {
-        Text(
+        Row(
             modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .align(Alignment.Start),
-            text = "# ${result.seq}",
-            fontWeight = FontWeight.Bold,
-        )
+                    .fillMaxWidth(),
+        ) {
+            Text(
+                modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                text = "# ${result.seq}",
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.weight(1f))
+            val clipboard = LocalClipboard.current
+            val coroutineScope = rememberCoroutineScope()
+            Image(
+                modifier = Modifier
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer)
+                        .clickable {
+                            coroutineScope.launch {
+                                clipboard.setContent(result.text)
+                            }
+                        }
+                        .padding(8.dp),
+                imageVector = FontAwesomeIcons.Regular.Copy,
+                contentDescription = null,
+            )
+        }
         result.overview.forEach { item ->
             Text(
                 modifier = Modifier

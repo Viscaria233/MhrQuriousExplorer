@@ -69,6 +69,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.io.core)
+            implementation(libs.composeIcons.fontAwesome)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
