@@ -29,7 +29,7 @@ class SearchQuriousVm : ViewModel() {
             }
         }
         val filteredConditions = conditions.asSequence()
-                .map { condition -> condition.copy( items = condition.items.filter { it.name.isNotEmpty() }) }
+                .map { condition -> condition.copy(items = condition.items.filter { it.name.isNotEmpty() }) }
                 .filter { it.items.isNotEmpty() }
                 .toList()
         logMsg.append("  conditions $filteredConditions (filtered)\n")
@@ -82,15 +82,6 @@ class SearchQuriousVm : ViewModel() {
         }
         return true
     }
-
-//    private fun QuriousResult.meets(conditions: List<SearchGroup>): Boolean {
-//        val overview = overview.toMutableList()
-//        return conditions.all { condition ->
-//            val firstMeetsInfo = overview.firstMeets(condition) ?: return@all false
-//            overview[firstMeetsInfo.index] = firstMeetsInfo.consumedItem
-//            true
-//        }
-//    }
 
     private fun loadQurious(file: Path) {
         val qurious = mutableMapOf<Int, MutableList<QuriousItem>>()

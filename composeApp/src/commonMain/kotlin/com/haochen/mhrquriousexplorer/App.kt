@@ -82,43 +82,40 @@ fun App(
     val results = searchQuriousVm.results.collectAsState()
     val allQurious = searchQuriousVm.allQurious.collectAsState()
     val selectedFileIndex = remember { mutableStateOf(0) }
-    MaterialTheme(
-        typography = myTypography(),
-    ) {
-        MhrQuriousExplorer(
-            modifier = Modifier,
-            files = files.value,
-            groups = groups.value,
-            results = results.value,
-            totalCount = allQurious.value.size,
-            selectedState = selectedFileIndex,
-            onRefreshClick = {
-                scanFilesVm.refreshFiles()
-            },
-            onAddGroupClick = {
-                searchInputVm.createNewGroup()
-            },
-            onAddItemClick = { group ->
-                searchInputVm.createNewItem(group)
-            },
-            onRemoveItemClick = { group, item ->
-                searchInputVm.removeItem(group, item)
-            },
-            onItemUpdate = { group, oldItem, newItem ->
-                searchInputVm.updateItem(group, oldItem, newItem)
-            },
-            onSearchClick = {
-                files.value.getOrNull(selectedFileIndex.value)?.let { file ->
-                    searchQuriousVm.search(file, groups.value)
-                }
-            },
-        )
-    }
+    MainScreen(
+        modifier = Modifier,
+        files = files.value,
+        groups = groups.value,
+        results = results.value,
+        totalCount = allQurious.value.size,
+        selectedState = selectedFileIndex,
+        onRefreshClick = {
+            scanFilesVm.refreshFiles()
+        },
+        onAddGroupClick = {
+            searchInputVm.createNewGroup()
+        },
+        onAddItemClick = { group ->
+            searchInputVm.createNewItem(group)
+        },
+        onRemoveItemClick = { group, item ->
+            searchInputVm.removeItem(group, item)
+        },
+        onItemUpdate = { group, oldItem, newItem ->
+            searchInputVm.updateItem(group, oldItem, newItem)
+        },
+        onSearchClick = {
+            files.value.getOrNull(selectedFileIndex.value)?.let { file ->
+                searchQuriousVm.search(file, groups.value)
+            }
+        },
+    )
 }
 
 @Composable
 @Preview
 private fun MainScreen(
+    modifier: Modifier = Modifier,
     files: List<Path> = emptyList(),
     groups: List<SearchGroup> = emptyList(),
     results: List<QuriousResult> = emptyList(),
@@ -135,11 +132,11 @@ private fun MainScreen(
         typography = myTypography(),
     ) {
         MhrQuriousExplorer(
-            modifier = Modifier,
-            files = withPreview(files) { FakeData.files },
-            groups = withPreview(groups) { FakeData.groups },
-            results = withPreview(results) { FakeData.results },
-            totalCount = withPreview(totalCount) { FakeData.allQurious.size },
+            modifier = modifier,
+            files = files.ifPreview { FakeData.files },
+            groups = groups.ifPreview { FakeData.groups },
+            results = results.ifPreview { FakeData.results },
+            totalCount = totalCount.ifPreview { FakeData.allQurious.size },
             selectedState = selectedState,
             onRefreshClick = onRefreshClick,
             onAddGroupClick = onAddGroupClick,
