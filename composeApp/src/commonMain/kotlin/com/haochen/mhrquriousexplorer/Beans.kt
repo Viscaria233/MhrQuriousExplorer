@@ -11,7 +11,11 @@ private val idGenerator = AtomicInt(0)
 data class SearchGroup(
     val id: Int = idGenerator.incrementAndFetch(),
     val items: List<SearchItem> = emptyList()
-)
+) {
+    override fun toString(): String {
+        return "$id@$items"
+    }
+}
 
 @OptIn(ExperimentalAtomicApi::class)
 data class SearchItem(
@@ -20,9 +24,13 @@ data class SearchItem(
     val count: Int = 0,
     val comparator: Comparator = Comparator.GreaterEquals,
 ) {
-    enum class Comparator {
-        GreaterEquals,
-        LessEquals,
+    enum class Comparator(val signature: String) {
+        GreaterEquals(">="),
+        LessEquals("<="),
+    }
+
+    override fun toString(): String {
+        return "[$name ${comparator.signature} $count]"
     }
 }
 
@@ -31,12 +39,15 @@ data class QuriousItem(
     val id: Int = idGenerator.incrementAndFetch(),
     val name: String = "",
     val count: Int = 0,
-)
+) {
+    override fun toString(): String {
+        return "[$name: $count]"
+    }
+}
 
 @OptIn(ExperimentalAtomicApi::class)
 data class QuriousResult(
     val seq: Int,
-    val conditions: List<SearchGroup>,
     val items: List<QuriousItem>,
 ) {
     val overview: List<QuriousItem> = items.asSequence()

@@ -33,73 +33,39 @@ class SearchQuriousVm : ViewModel() {
                 .filter { it.items.isNotEmpty() }
                 .toList()
         logMsg.append("  conditions $filteredConditions (filtered)\n")
-        _results.value = search(filteredConditions).also {
+        _results.value = search(filteredConditions, logMsg).also {
             logMsg.append("  search result size=${it.size}\n")
         }
         println(logMsg.toString())
     }
 
-    private fun search(conditions: List<SearchGroup>): List<QuriousResult> {
+    private fun search(conditions: List<SearchGroup>, logMsg: StringBuilder): List<QuriousResult> {
         if (conditions.isEmpty()) {
             return _allQurious.value
         }
-        return _allQurious.value.filter { it.meets(conditions) }
-    }
-
-    private fun QuriousResult.meets(conditions: List<SearchGroup>): Boolean {
-        val overview = overview.toMutableList()
-        for (condition in conditions) {
-            var consumed: Pair<Int, QuriousItem>? = null
-            var omittedConsumed: QuriousItem? = null
-            for (conditionItem in condition.items) {
-                if (consumed != null) {
-                    break
-                }
-                var nameMatchedIndex: Int? = null
-                for (index in overview.indices) {
-                    val item = overview[index]
-                    if (item.name.contains(conditionItem.name)) {
-                        nameMatchedIndex = index
-                        when (conditionItem.comparator) {
-                            SearchItem.Comparator.GreaterEquals -> {
-                                if (item.count >= conditionItem.count) {
-                                    consumed = index to item.copy(count = item.count - conditionItem.count)
-                                    break
-                                }
-                            }
-                            SearchItem.Comparator.LessEquals -> {
-                                if (item.count <= conditionItem.count) {
-                                    consumed = index to item.copy(count = item.count - conditionItem.count)
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-                if (nameMatchedIndex == null) {
-                    when (conditionItem.comparator) {
-                        SearchItem.Comparator.GreaterEquals -> {
-                            if (conditionItem.count <= 0) {
-                                omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
-                            }
-                        }
-                        SearchItem.Comparator.LessEquals -> {
-                            if (conditionItem.count >= 0) {
-                                omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
-                            }
-                        }
-                    }
-                }
-            }
-            if (consumed != null) {
-                overview[consumed.first] = consumed.second
-            } else if (omittedConsumed != null) {
-                overview.add(omittedConsumed)
-            } else {
-                return false
+        val allCombinations = conditions.allCombinations().also { logMsg.append("  allCombinations=$it\n") }
+        return _allQurious.value.filter { result ->
+            allCombinations.any { combination ->
+                combination.all { result.meets(it) }
             }
         }
-        return true
+    }
+
+    private fun QuriousResult.meets(condition: SearchItem): Boolean {
+        val nameMatchedItems = overview.filter { it.name.contains(condition.name) }
+        return if (nameMatchedItems.isEmpty()) {
+            when (condition.comparator) {
+                SearchItem.Comparator.GreaterEquals -> 0 >= condition.count
+                SearchItem.Comparator.LessEquals -> 0 <= condition.count
+            }
+        } else {
+            nameMatchedItems.any { nameMatchedItem ->
+                when (condition.comparator) {
+                    SearchItem.Comparator.GreaterEquals -> nameMatchedItem.count >= condition.count
+                    SearchItem.Comparator.LessEquals -> nameMatchedItem.count <= condition.count
+                }
+            }
+        }
     }
 
     private fun loadQurious(file: Path) {
@@ -119,6 +85,32 @@ class SearchQuriousVm : ViewModel() {
                         .add(QuriousItem(name = name, count = count.toInt()))
             }
         }
-        _allQurious.value = qurious.map { QuriousResult(seq = it.key, conditions = emptyList(), items = it.value) }
+        _allQurious.value = qurious.map { QuriousResult(seq = it.key, items = it.value) }
     }
+}
+
+private fun <T> List<Set<T>>.cartesianProduct(): Set<List<T>> {
+    return fold(listOf(listOf<T>())) { acc, set ->
+        acc.flatMap { list ->
+            set.map { i -> list + i }
+        }
+    }.toSet()
+}
+
+private fun List<SearchGroup>.allCombinations(): Set<List<SearchItem>> {
+    val comparator = compareBy(SearchItem::name, SearchItem::count)
+    return map { group ->
+        group.items.mapTo(mutableSetOf()) { it.copy(id = 0) }
+    }.cartesianProduct().mapTo(mutableSetOf()) {
+        it.sortedWith(comparator)
+    }.map { searchItems ->
+        searchItems.groupBy { it.name }.mapNotNull { (name, items) ->
+            val comparators = items.mapTo(mutableSetOf()) { it.comparator }
+            if (comparators.size > 1) {
+                null
+            } else {
+                SearchItem(id = 0, name = name, count = items.sumOf { it.count }, comparator = comparators.first())
+            }
+        }.sortedWith(comparator)
+    }.filterTo(mutableSetOf()) { it.isNotEmpty() }
 }

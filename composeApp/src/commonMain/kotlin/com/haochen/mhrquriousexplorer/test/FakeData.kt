@@ -26,7 +26,6 @@ object FakeData {
     val results: List<QuriousResult> = (1..50).map { seq ->
         QuriousResult(
             seq = seq,
-            conditions = emptyList(),
             items = (1..(seq % 5)).map {
                 QuriousItem(name = "item_$it", count = it)
             }
@@ -35,7 +34,6 @@ object FakeData {
     val allQurious: List<QuriousResult> = (1..100).map { seq ->
         QuriousResult(
             seq = seq,
-            conditions = emptyList(),
             items = (1..(seq % 5)).map {
                 QuriousItem(name = "item_$it", count = it)
             }
