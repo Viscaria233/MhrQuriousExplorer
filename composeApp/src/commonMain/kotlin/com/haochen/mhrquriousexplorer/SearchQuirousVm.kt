@@ -60,15 +60,34 @@ class SearchQuriousVm : ViewModel() {
                     val item = overview[index]
                     if (item.name.contains(conditionItem.name)) {
                         nameMatchedIndex = index
-                        if (item.count >= conditionItem.count) {
-                            consumed = index to item.copy(count = item.count - conditionItem.count)
-                            break
+                        when (conditionItem.comparator) {
+                            SearchItem.Comparator.GreaterEquals -> {
+                                if (item.count >= conditionItem.count) {
+                                    consumed = index to item.copy(count = item.count - conditionItem.count)
+                                    break
+                                }
+                            }
+                            SearchItem.Comparator.LessEquals -> {
+                                if (item.count <= conditionItem.count) {
+                                    consumed = index to item.copy(count = item.count - conditionItem.count)
+                                    break
+                                }
+                            }
                         }
                     }
                 }
                 if (nameMatchedIndex == null) {
-                    if (conditionItem.count <= 0) {
-                        omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
+                    when (conditionItem.comparator) {
+                        SearchItem.Comparator.GreaterEquals -> {
+                            if (conditionItem.count <= 0) {
+                                omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
+                            }
+                        }
+                        SearchItem.Comparator.LessEquals -> {
+                            if (conditionItem.count >= 0) {
+                                omittedConsumed = QuriousItem(name = conditionItem.name, count = -conditionItem.count)
+                            }
+                        }
                     }
                 }
             }

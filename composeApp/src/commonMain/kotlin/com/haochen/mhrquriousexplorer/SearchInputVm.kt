@@ -9,17 +9,17 @@ class SearchInputVm : ViewModel() {
     val groups = _groups.asStateFlow()
 
     fun createNewGroup() {
-        _groups.value = _groups.value.toMutableList().apply { add(SearchGroup(items = listOf(QuriousItem()))) }
+        _groups.value = _groups.value.toMutableList().apply { add(SearchGroup(items = listOf(SearchItem()))) }
     }
 
     fun createNewItem(group: SearchGroup) {
         val currentGroups = _groups.value.toMutableList()
         val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return
-        currentGroups[index] = group.copy(items = group.items.toMutableList().apply { add(QuriousItem()) })
+        currentGroups[index] = group.copy(items = group.items.toMutableList().apply { add(SearchItem()) })
         _groups.value = currentGroups
     }
 
-    fun removeItem(group: SearchGroup, item: QuriousItem) {
+    fun removeItem(group: SearchGroup, item: SearchItem) {
         val currentGroups = _groups.value.toMutableList()
         val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return
         val newGroup = group.copy(items = group.items.toMutableList().apply { remove(item) })
@@ -31,7 +31,7 @@ class SearchInputVm : ViewModel() {
         _groups.value = currentGroups
     }
 
-    fun updateItem(group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) {
+    fun updateItem(group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) {
         val currentGroups = _groups.value.toMutableList()
         val index = currentGroups.indexOf(group).takeIf { it >= 0 } ?: return
         currentGroups[index] = group.copy(items = group.items.toMutableList().apply {

@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,10 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,6 +62,8 @@ import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.regular.Copy
+import compose.icons.fontawesomeicons.solid.GreaterThanEqual
+import compose.icons.fontawesomeicons.solid.LessThanEqual
 import compose.icons.fontawesomeicons.solid.Minus
 import compose.icons.fontawesomeicons.solid.Plus
 import kotlinx.coroutines.launch
@@ -124,8 +125,8 @@ private fun MainScreen(
     onRefreshClick: () -> Unit = {},
     onAddGroupClick: () -> Unit = {},
     onAddItemClick: (group: SearchGroup) -> Unit = {},
-    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit = { _, _ -> },
-    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit = { _, _, _ -> },
+    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit = { _, _ -> },
+    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit = { _, _, _ -> },
     onSearchClick: () -> Unit = {},
 ) {
     MaterialTheme(
@@ -159,8 +160,8 @@ private fun MhrQuriousExplorer(
     onRefreshClick: () -> Unit,
     onAddGroupClick: () -> Unit,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
-    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit,
     onSearchClick: () -> Unit,
 ) {
     Column(
@@ -269,8 +270,8 @@ private fun SearchBox(
     groups: List<SearchGroup>,
     onAddGroupClick: () -> Unit,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
-    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit,
     onSearchClick: () -> Unit,
 ) {
     Column(
@@ -327,8 +328,8 @@ private fun SearchGroupList(
     modifier: Modifier = Modifier,
     groups: List<SearchGroup>,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
-    onItemUpdate: (group: SearchGroup, oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
+    onItemUpdate: (group: SearchGroup, oldItem: SearchItem, newItem: SearchItem) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier,
@@ -362,8 +363,8 @@ private fun SearchGroup(
     modifier: Modifier = Modifier,
     group: SearchGroup,
     onAddItemClick: (group: SearchGroup) -> Unit,
-    onRemoveItemClick: (group: SearchGroup, item: QuriousItem) -> Unit,
-    onItemUpdate: (oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
+    onItemUpdate: (oldItem: SearchItem, newItem: SearchItem) -> Unit,
 ) {
     Row(
         modifier = modifier,
@@ -419,9 +420,9 @@ private fun SearchGroup(
 @Composable
 private fun SearchItemEditor(
     modifier: Modifier = Modifier,
-    item: QuriousItem,
-    onRemoveItemClick: (item: QuriousItem) -> Unit,
-    onItemUpdate: (oldItem: QuriousItem, newItem: QuriousItem) -> Unit,
+    item: SearchItem,
+    onRemoveItemClick: (item: SearchItem) -> Unit,
+    onItemUpdate: (oldItem: SearchItem, newItem: SearchItem) -> Unit,
 ) {
     Row(
         modifier = modifier,
@@ -442,6 +443,32 @@ private fun SearchItemEditor(
             lineLimits = TextFieldLineLimits.SingleLine,
             state = nameState,
         )
+        val toggleChecked = remember { mutableStateOf(item.comparator.toggleChecked) }
+        IconToggleButton(
+            modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.CenterVertically),
+            checked = toggleChecked.value,
+            onCheckedChange = { checked ->
+                toggleChecked.value = checked
+                onItemUpdate(item, item.copy(comparator = checked.searchItemComparator))
+            },
+        ) {
+            Icon(
+                modifier = Modifier
+                        .size(20.dp)
+                        .clip(RoundedCornerShape(100))
+                        .align(Alignment.CenterVertically)
+                        .background(MaterialTheme.colorScheme.tertiaryContainer)
+                        .padding(all = 5.dp),
+                imageVector = when (toggleChecked.value.searchItemComparator) {
+                    SearchItem.Comparator.GreaterEquals -> FontAwesomeIcons.Solid.GreaterThanEqual
+                    SearchItem.Comparator.LessEquals -> FontAwesomeIcons.Solid.LessThanEqual
+                },
+                contentDescription = "",
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
         val countState = rememberTextFieldState(item.count.toString())
         BasicTextField(
             modifier = Modifier
@@ -483,6 +510,18 @@ private fun SearchItemEditor(
         )
     }
 }
+
+private val SearchItem.Comparator.toggleChecked: Boolean
+    get() = when (this) {
+        SearchItem.Comparator.LessEquals -> true
+        SearchItem.Comparator.GreaterEquals -> false
+    }
+
+private val Boolean.searchItemComparator: SearchItem.Comparator
+    get() = when (this) {
+        true -> SearchItem.Comparator.LessEquals
+        false -> SearchItem.Comparator.GreaterEquals
+    }
 
 @Composable
 private fun SearchResult(

@@ -10,8 +10,21 @@ private val idGenerator = AtomicInt(0)
 @OptIn(ExperimentalAtomicApi::class)
 data class SearchGroup(
     val id: Int = idGenerator.incrementAndFetch(),
-    val items: List<QuriousItem> = emptyList()
+    val items: List<SearchItem> = emptyList()
 )
+
+@OptIn(ExperimentalAtomicApi::class)
+data class SearchItem(
+    val id: Int = idGenerator.incrementAndFetch(),
+    val name: String = "",
+    val count: Int = 0,
+    val comparator: Comparator = Comparator.GreaterEquals,
+) {
+    enum class Comparator {
+        GreaterEquals,
+        LessEquals,
+    }
+}
 
 @OptIn(ExperimentalAtomicApi::class)
 data class QuriousItem(
