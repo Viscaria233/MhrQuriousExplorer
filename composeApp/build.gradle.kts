@@ -115,7 +115,7 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
-val appVersion = "1.3.0"
+val appVersion = "2.0.0"
 
 buildConfig {
     android.namespace?.let { packageName(it) }
