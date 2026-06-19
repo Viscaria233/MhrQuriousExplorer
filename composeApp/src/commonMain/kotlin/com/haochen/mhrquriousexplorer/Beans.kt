@@ -21,6 +21,7 @@ data class SearchGroup(
 data class SearchItem(
     val id: Int = idGenerator.incrementAndFetch(),
     val name: String = "",
+    val precision: Boolean = false,
     val count: Int = 0,
     val comparator: Comparator = Comparator.GreaterEquals,
 ) {
@@ -54,7 +55,7 @@ data class SearchItem(
     }
 
     override fun toString(): String {
-        return "[$name ${comparator.signature} $count]"
+        return "[${if (precision) "精确" else "模糊"}: $name ${comparator.signature} $count]"
     }
 }
 

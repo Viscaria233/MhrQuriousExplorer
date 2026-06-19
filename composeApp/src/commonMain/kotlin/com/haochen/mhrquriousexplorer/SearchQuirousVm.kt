@@ -50,7 +50,13 @@ class SearchQuriousVm : ViewModel() {
     }
 
     private fun QuriousResult.meets(condition: SearchItem): Boolean {
-        val nameMatchedItems = overview.filter { it.name.contains(condition.name) }
+        val nameMatchedItems = overview.filter {
+            if (condition.precision) {
+                it.name == condition.name
+            } else {
+                it.name.contains(condition.name)
+            }
+        }
         return if (nameMatchedItems.isEmpty()) {
             with(condition.comparator) {
                 0 meetsComparingWith condition.count
@@ -73,19 +79,28 @@ private fun <T> List<Set<T>>.cartesianProduct(): Set<List<T>> {
     }.toSet()
 }
 
+private val SearchItem.comparableKey: String
+    get() = "${name}_${precision}"
+
 private fun List<SearchGroup>.allCombinations(): Set<List<SearchItem>> {
-    val comparator = compareBy(SearchItem::name, SearchItem::count)
+    val comparator = compareBy(SearchItem::comparableKey, SearchItem::count)
     return map { group ->
         group.items.mapTo(mutableSetOf()) { it.copy(id = 0) }
     }.cartesianProduct().mapTo(mutableSetOf()) {
         it.sortedWith(comparator)
     }.map { searchItems ->
-        searchItems.groupBy { it.name }.mapNotNull { (name, items) ->
+        searchItems.groupBy { it.name to it.precision }.mapNotNull { (key, items) ->
             val comparators = items.mapTo(mutableSetOf()) { it.comparator }
             if (comparators.size > 1) {
                 null
             } else {
-                SearchItem(id = 0, name = name, count = items.sumOf { it.count }, comparator = comparators.first())
+                SearchItem(
+                    id = 0,
+                    name = key.first,
+                    precision = key.second,
+                    count = items.sumOf { it.count },
+                    comparator = comparators.first(),
+                )
             }
         }.sortedWith(comparator)
     }.filterTo(mutableSetOf()) { it.isNotEmpty() }

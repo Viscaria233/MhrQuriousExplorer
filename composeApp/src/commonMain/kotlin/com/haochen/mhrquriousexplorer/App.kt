@@ -4,9 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,13 +16,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -40,11 +37,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -59,8 +54,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
@@ -73,7 +71,6 @@ import com.haochen.mhrquriousexplorer.loader.CharmJsonLoader
 import com.haochen.mhrquriousexplorer.loader.FileLoader
 import com.haochen.mhrquriousexplorer.loader.QuriousCsvLoader
 import com.haochen.mhrquriousexplorer.test.FakeData
-import compose.icons.AllIcons
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.Solid
@@ -85,8 +82,6 @@ import compose.icons.fontawesomeicons.solid.GreaterThanEqual
 import compose.icons.fontawesomeicons.solid.LessThanEqual
 import compose.icons.fontawesomeicons.solid.Minus
 import compose.icons.fontawesomeicons.solid.Plus
-import compose.icons.fontawesomeicons.solid.SortDown
-import compose.icons.fontawesomeicons.solid.SortUp
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -496,7 +491,40 @@ private fun SearchItemEditor(
 ) {
     Row(
         modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        var precision by remember { mutableStateOf(false) }
+        val lineColor = MaterialTheme.colorScheme.outlineVariant
+        Text(
+            modifier = Modifier
+                    .padding(start = 2.dp)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(100))
+                    .then(
+                        if (precision) Modifier else Modifier.drawWithCache {
+                            onDrawWithContent {
+                                drawContent()
+                                drawLine(
+                                    color = lineColor,
+                                    start = Offset(0f, 0f),
+                                    end = Offset(size.width, size.height),
+                                    strokeWidth = 6.dp.value,
+                                )
+                            }
+                        }
+                    )
+                    .background(MaterialTheme.colorScheme.tertiaryContainer)
+                    .then(if (precision) Modifier else Modifier.alpha(0.2f))
+                    .clickable {
+                        precision = !precision
+                        onItemUpdate(item, item.copy(precision = precision))
+                    }
+                    .padding(horizontal = 8.dp),
+            text = "精确",
+            textAlign = TextAlign.Center,
+            style = TextStyle.Default.copy(fontFamily = LocalTextStyle.current.fontFamily),
+            maxLines = 1,
+        )
         val nameState = rememberTextFieldState(item.name)
         BasicTextField(
             modifier = Modifier
@@ -516,8 +544,7 @@ private fun SearchItemEditor(
         var comparatorIndex by remember { mutableStateOf(0) }
         IconButton(
             modifier = Modifier
-                    .size(20.dp)
-                    .align(Alignment.CenterVertically),
+                    .size(20.dp),
             onClick = {
                 comparatorIndex = (comparatorIndex + 1) % SearchItem.Comparator.order.size
                 onItemUpdate(item, item.copy(comparator = SearchItem.Comparator.order[comparatorIndex]))
@@ -570,7 +597,6 @@ private fun SearchItemEditor(
                     .size(20.dp)
                     .clip(RoundedCornerShape(100))
                     .background(MaterialTheme.colorScheme.tertiaryContainer)
-                    .align(Alignment.CenterVertically)
                     .clickable {
                         onRemoveItemClick(item)
                     }
@@ -637,10 +663,7 @@ private fun TypeSelector(
         Row(
             modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable, false)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(bounded = true),
-                    ) {
+                    .clickable {
                         expanded = !expanded
                     }
                     .padding(horizontal = 16.dp, vertical = 4.dp),
