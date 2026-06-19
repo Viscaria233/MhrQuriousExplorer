@@ -25,8 +25,32 @@ data class SearchItem(
     val comparator: Comparator = Comparator.GreaterEquals,
 ) {
     enum class Comparator(val signature: String) {
-        GreaterEquals(">="),
-        LessEquals("<="),
+        GreaterEquals(">=") {
+            override fun Int.meetsComparingWith(target: Int): Boolean {
+                return this >= target
+            }
+        },
+        LessEquals("<=") {
+            override fun Int.meetsComparingWith(target: Int): Boolean {
+                return this <= target
+            }
+        },
+        Equals("=") {
+            override fun Int.meetsComparingWith(target: Int): Boolean {
+                return this == target
+            }
+        },
+        ;
+
+        abstract infix fun Int.meetsComparingWith(target: Int): Boolean
+
+        companion object {
+            val order = listOf(
+                GreaterEquals,
+                LessEquals,
+                Equals,
+            )
+        }
     }
 
     override fun toString(): String {

@@ -1,12 +1,10 @@
 package com.haochen.mhrquriousexplorer
 
 import androidx.lifecycle.ViewModel
+import com.haochen.mhrquriousexplorer.loader.FileLoader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readLine
 
 class SearchQuriousVm : ViewModel() {
     private var currentFile: Path? = null
@@ -17,11 +15,11 @@ class SearchQuriousVm : ViewModel() {
     private val _results = MutableStateFlow<List<QuriousResult>>(emptyList())
     val results = _results.asStateFlow()
 
-    fun search(file: Path, conditions: List<SearchGroup>) {
+    fun search(file: Path, loader: FileLoader, conditions: List<SearchGroup>) {
         val logMsg = StringBuilder("search\n  file=$file\n  conditions $conditions (input)\n")
         if (currentFile != file) {
             try {
-                loadQurious(file)
+                _allQurious.value = loader.load(file)
                 currentFile = file
                 logMsg.append("  loadQurious size=${_allQurious.value.size}\n")
             } catch (e: Exception) {
@@ -54,38 +52,16 @@ class SearchQuriousVm : ViewModel() {
     private fun QuriousResult.meets(condition: SearchItem): Boolean {
         val nameMatchedItems = overview.filter { it.name.contains(condition.name) }
         return if (nameMatchedItems.isEmpty()) {
-            when (condition.comparator) {
-                SearchItem.Comparator.GreaterEquals -> 0 >= condition.count
-                SearchItem.Comparator.LessEquals -> 0 <= condition.count
+            with(condition.comparator) {
+                0 meetsComparingWith condition.count
             }
         } else {
             nameMatchedItems.any { nameMatchedItem ->
-                when (condition.comparator) {
-                    SearchItem.Comparator.GreaterEquals -> nameMatchedItem.count >= condition.count
-                    SearchItem.Comparator.LessEquals -> nameMatchedItem.count <= condition.count
+                with(condition.comparator) {
+                    nameMatchedItem.count meetsComparingWith condition.count
                 }
             }
         }
-    }
-
-    private fun loadQurious(file: Path) {
-        val qurious = mutableMapOf<Int, MutableList<QuriousItem>>()
-        SystemFileSystem.source(file).buffered().use {
-            while (true) {
-                val line = it.readLine() ?: break
-                if (line.isEmpty()) {
-                    continue
-                }
-                if (!line[0].isDigit()) {
-                    continue
-                }
-                val (seq, content, count) = line.split(',')
-                val (_, name) = content.split('`')
-                qurious.getOrPut(seq.toInt()) { mutableListOf() }
-                        .add(QuriousItem(name = name, count = count.toInt()))
-            }
-        }
-        _allQurious.value = qurious.map { QuriousResult(seq = it.key, items = it.value) }
     }
 }
 

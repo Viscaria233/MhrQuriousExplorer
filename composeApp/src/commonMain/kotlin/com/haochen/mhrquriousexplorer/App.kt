@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,18 +35,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,20 +69,42 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.haochen.mhrquriousexplorer.loader.CharmJsonLoader
+import com.haochen.mhrquriousexplorer.loader.FileLoader
+import com.haochen.mhrquriousexplorer.loader.QuriousCsvLoader
 import com.haochen.mhrquriousexplorer.test.FakeData
+import compose.icons.AllIcons
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.regular.Copy
+import compose.icons.fontawesomeicons.solid.ChevronDown
+import compose.icons.fontawesomeicons.solid.ChevronUp
+import compose.icons.fontawesomeicons.solid.Equals
 import compose.icons.fontawesomeicons.solid.GreaterThanEqual
 import compose.icons.fontawesomeicons.solid.LessThanEqual
 import compose.icons.fontawesomeicons.solid.Minus
 import compose.icons.fontawesomeicons.solid.Plus
+import compose.icons.fontawesomeicons.solid.SortDown
+import compose.icons.fontawesomeicons.solid.SortUp
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 private val ROUND_CORNER_SIZE = 8.dp
+
+private enum class Type(
+    val text: String,
+    val loader: FileLoader,
+) {
+    Qurious("炼化", QuriousCsvLoader()),
+    Charm("护石", CharmJsonLoader()),
+}
+
+private val TYPE_ORDER = listOf(
+    Type.Qurious,
+    Type.Charm,
+)
 
 @Composable
 fun App(
@@ -78,6 +112,7 @@ fun App(
     searchInputVm: SearchInputVm = viewModel { SearchInputVm() },
     searchQuriousVm: SearchQuriousVm = viewModel { SearchQuriousVm() },
 ) {
+    var type by remember { mutableStateOf(TYPE_ORDER.first()) }
     val files = scanFilesVm.files.collectAsState()
     val groups = searchInputVm.groups.collectAsState()
     val results = searchQuriousVm.results.collectAsState()
@@ -85,6 +120,7 @@ fun App(
     val selectedFileIndex = remember { mutableStateOf(0) }
     MainScreen(
         modifier = Modifier,
+        type = type,
         files = files.value,
         groups = groups.value,
         results = results.value,
@@ -92,6 +128,9 @@ fun App(
         selectedState = selectedFileIndex,
         onRefreshClick = {
             scanFilesVm.refreshFiles()
+        },
+        onTypeChange = {
+            type = it
         },
         onAddGroupClick = {
             searchInputVm.createNewGroup()
@@ -107,7 +146,11 @@ fun App(
         },
         onSearchClick = {
             files.value.getOrNull(selectedFileIndex.value)?.let { file ->
-                searchQuriousVm.search(file, groups.value)
+                searchQuriousVm.search(
+                    file = file,
+                    loader = type.loader,
+                    conditions = groups.value,
+                )
             }
         },
     )
@@ -118,11 +161,13 @@ fun App(
 private fun MainScreen(
     modifier: Modifier = Modifier,
     files: List<Path> = emptyList(),
+    type: Type = Type.Qurious,
     groups: List<SearchGroup> = emptyList(),
     results: List<QuriousResult> = emptyList(),
     totalCount: Int = 0,
     selectedState: MutableState<Int> = remember { mutableStateOf(0) },
     onRefreshClick: () -> Unit = {},
+    onTypeChange: (Type) -> Unit = {},
     onAddGroupClick: () -> Unit = {},
     onAddItemClick: (group: SearchGroup) -> Unit = {},
     onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit = { _, _ -> },
@@ -135,11 +180,13 @@ private fun MainScreen(
         MhrQuriousExplorer(
             modifier = modifier,
             files = files.ifPreview { FakeData.files },
+            type = type,
             groups = groups.ifPreview { FakeData.groups },
             results = results.ifPreview { FakeData.results },
             totalCount = totalCount.ifPreview { FakeData.allQurious.size },
             selectedState = selectedState,
             onRefreshClick = onRefreshClick,
+            onTypeChange = onTypeChange,
             onAddGroupClick = onAddGroupClick,
             onAddItemClick = onAddItemClick,
             onRemoveItemClick = onRemoveItemClick,
@@ -153,11 +200,13 @@ private fun MainScreen(
 private fun MhrQuriousExplorer(
     modifier: Modifier = Modifier,
     files: List<Path>,
+    type: Type,
     groups: List<SearchGroup>,
     results: List<QuriousResult>,
     totalCount: Int,
     selectedState: MutableState<Int>,
     onRefreshClick: () -> Unit,
+    onTypeChange: (Type) -> Unit,
     onAddGroupClick: () -> Unit,
     onAddItemClick: (group: SearchGroup) -> Unit,
     onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
@@ -198,7 +247,9 @@ private fun MhrQuriousExplorer(
                         .fillMaxHeight()
                         .weight(2f)
                         .clip(RoundedCornerShape(ROUND_CORNER_SIZE)),
+                type = type,
                 groups = groups,
+                onTypeChange = onTypeChange,
                 onAddGroupClick = onAddGroupClick,
                 onAddItemClick = onAddItemClick,
                 onRemoveItemClick = onRemoveItemClick,
@@ -267,7 +318,9 @@ private fun FileList(
 @Composable
 private fun SearchBox(
     modifier: Modifier = Modifier,
+    type: Type,
     groups: List<SearchGroup>,
+    onTypeChange: (Type) -> Unit,
     onAddGroupClick: () -> Unit,
     onAddItemClick: (group: SearchGroup) -> Unit,
     onRemoveItemClick: (group: SearchGroup, item: SearchItem) -> Unit,
@@ -278,19 +331,36 @@ private fun SearchBox(
         modifier = modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Image(
+        Row(
             modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
-                    .background(MaterialTheme.colorScheme.tertiaryContainer)
-                    .align(Alignment.End)
-                    .clickable {
-                        onAddGroupClick()
-                    }
-                    .padding(8.dp),
-            imageVector = FontAwesomeIcons.Solid.Plus,
-            contentDescription = null,
-        )
+                    .fillMaxWidth(),
+        ) {
+            TypeSelector(
+                modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = ROUND_CORNER_SIZE, bottomEnd = ROUND_CORNER_SIZE))
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(topStart = ROUND_CORNER_SIZE, bottomEnd = ROUND_CORNER_SIZE)
+                        )
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
+                type = type,
+                onTypeChange = onTypeChange,
+            )
+            Spacer(Modifier.weight(1f))
+            Image(
+                modifier = Modifier
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(bottomStart = ROUND_CORNER_SIZE))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer)
+                        .clickable {
+                            onAddGroupClick()
+                        }
+                        .padding(8.dp),
+                imageVector = FontAwesomeIcons.Solid.Plus,
+                contentDescription = null,
+            )
+        }
         SearchGroupList(
             modifier = Modifier
                     .fillMaxWidth()
@@ -443,15 +513,14 @@ private fun SearchItemEditor(
             lineLimits = TextFieldLineLimits.SingleLine,
             state = nameState,
         )
-        val toggleChecked = remember { mutableStateOf(item.comparator.toggleChecked) }
-        IconToggleButton(
+        var comparatorIndex by remember { mutableStateOf(0) }
+        IconButton(
             modifier = Modifier
                     .size(20.dp)
                     .align(Alignment.CenterVertically),
-            checked = toggleChecked.value,
-            onCheckedChange = { checked ->
-                toggleChecked.value = checked
-                onItemUpdate(item, item.copy(comparator = checked.searchItemComparator))
+            onClick = {
+                comparatorIndex = (comparatorIndex + 1) % SearchItem.Comparator.order.size
+                onItemUpdate(item, item.copy(comparator = SearchItem.Comparator.order[comparatorIndex]))
             },
         ) {
             Icon(
@@ -461,9 +530,10 @@ private fun SearchItemEditor(
                         .align(Alignment.CenterVertically)
                         .background(MaterialTheme.colorScheme.tertiaryContainer)
                         .padding(all = 5.dp),
-                imageVector = when (toggleChecked.value.searchItemComparator) {
+                imageVector = when (SearchItem.Comparator.order[comparatorIndex]) {
                     SearchItem.Comparator.GreaterEquals -> FontAwesomeIcons.Solid.GreaterThanEqual
                     SearchItem.Comparator.LessEquals -> FontAwesomeIcons.Solid.LessThanEqual
+                    SearchItem.Comparator.Equals -> FontAwesomeIcons.Solid.Equals
                 },
                 contentDescription = "",
                 tint = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -511,18 +581,6 @@ private fun SearchItemEditor(
     }
 }
 
-private val SearchItem.Comparator.toggleChecked: Boolean
-    get() = when (this) {
-        SearchItem.Comparator.LessEquals -> true
-        SearchItem.Comparator.GreaterEquals -> false
-    }
-
-private val Boolean.searchItemComparator: SearchItem.Comparator
-    get() = when (this) {
-        true -> SearchItem.Comparator.LessEquals
-        false -> SearchItem.Comparator.GreaterEquals
-    }
-
 @Composable
 private fun SearchResult(
     modifier: Modifier = Modifier,
@@ -561,6 +619,64 @@ private fun SearchResult(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TypeSelector(
+    modifier: Modifier = Modifier,
+    type: Type,
+    onTypeChange: (Type) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        modifier = modifier,
+        expanded = expanded,
+        onExpandedChange = {
+            // 用 clickable 修改 expanded，这里不处理
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, false)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = true),
+                    ) {
+                        expanded = !expanded
+                    }
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = type.text,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                fontWeight = FontWeight.Bold,
+            )
+            Image(
+                modifier = Modifier
+                        .padding(start = 4.dp)
+                        .size(12.dp),
+                imageVector = if (expanded) FontAwesomeIcons.Solid.ChevronUp else FontAwesomeIcons.Solid.ChevronDown,
+                contentDescription = null,
+            )
+        }
+        ExposedDropdownMenu(
+            modifier = Modifier,
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            TYPE_ORDER.forEach {
+                DropdownMenuItem(
+                    text = { Text(it.text) },
+                    onClick = {
+                        onTypeChange(it)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun QuriousResultList(
     modifier: Modifier = Modifier,
@@ -571,13 +687,8 @@ private fun QuriousResultList(
     LazyRow (
         modifier = modifier
                 .fillMaxSize()
-                .draggable(
-                    state = rememberDraggableState { deltaX ->
-                        coroutineScope.launch {
-                            lazyListState.scrollBy(-deltaX)
-                        }
-                    },
-                    Orientation.Horizontal
+                .lazyRowDragWithInertia(
+                    state = lazyListState,
                 )
                 .onScrollWheel { deltaX, deltaY ->
                     coroutineScope.launch {
@@ -597,6 +708,9 @@ private fun QuriousResultList(
                 result = it,
             )
         }
+    }
+    LaunchedEffect(results) {
+        lazyListState.scrollToItem(0)
     }
 }
 

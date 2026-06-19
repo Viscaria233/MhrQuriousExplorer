@@ -23,12 +23,17 @@ class ScanFilesVm : ViewModel() {
             println("scanFiles not supported on platform ${getPlatform()}")
             return emptyList()
         }
-        return SystemFileSystem.list(baseDir).filter { it.name.endsWith(SCAN_FILE_EXT) }.also {
+        return SystemFileSystem.list(baseDir).filter {
+            SCAN_FILE_EXT.any { ext -> it.name.endsWith(ext) }
+        }.also {
             println("scanFiles\n  $it")
         }
     }
 
     companion object Companion {
-        private const val SCAN_FILE_EXT = ".csv"
+        private val SCAN_FILE_EXT = listOf(
+            ".csv",
+            ".json",
+        )
     }
 }

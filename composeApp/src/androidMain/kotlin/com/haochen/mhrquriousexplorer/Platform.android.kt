@@ -3,6 +3,8 @@ package com.haochen.mhrquriousexplorer
 import android.content.ClipData
 import android.os.Build
 import android.os.Environment
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
@@ -22,3 +24,10 @@ actual fun Modifier.onScrollWheel(onScroll: (deltaX: Float, deltaY: Float) -> Un
 actual suspend fun Clipboard.setContent(content: String) {
     setClipEntry(ClipData.newPlainText("", content).toClipEntry())
 }
+
+@Composable
+actual fun Modifier.lazyRowDragWithInertia(
+    state: LazyListState,
+    enabled: Boolean,
+    frictionMultiplier: Float,
+): Modifier = this
